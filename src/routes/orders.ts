@@ -1,15 +1,15 @@
 import Fastify from "fastify";
 import * as Types from '../cores/types'
+import { DexEngine } from "../cores/mockDexEngine";
+import { worker,sendStatus } from "../cores/workers";
 export const fastify = Fastify({
   logger: true
 })
 // @ts-ignore: allow dynamic require for plugin registration
 fastify.register(require('@fastify/websocket'));
-const InMemoryOrders: any[] = [];// for now 
+export const InMemoryOrders: any[] = [];// for now 
 export const orderMap = new Map<string, any>();
 const makeId = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
-
-
 
 fastify.get('/ws/orders', { websocket: true } as any, (connection, req) => {
   const query = (req as any).query as Record<string, string | undefined>;
@@ -24,6 +24,8 @@ fastify.get('/ws/orders', { websocket: true } as any, (connection, req) => {
   });
 });
 
+
+
 fastify.post('/api/orders/execute', async (req, reply) => {
       let order: any;
       try {
@@ -34,6 +36,7 @@ fastify.post('/api/orders/execute', async (req, reply) => {
       }
       const orderId = makeId();// random order id 
       InMemoryOrders.push({ id: orderId, ...order });
+      worker(orderId);//this is processing ,i have to add this as a bull mq job later
       // will do some processing here 
       return { orderId };
 });
