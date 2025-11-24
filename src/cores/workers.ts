@@ -2,7 +2,8 @@
 import Fastify from "fastify";
 import * as Types from '../cores/types';
 import { DexEngine} from "../cores/mockDexEngine";
-import { InMemoryOrders,orderMap } from "../routes/orders";
+import { InMemoryOrders } from "../routes/orders";
+import { sendStatus } from "./statusPublisher";
 export const fastify = Fastify({
   logger: true
 });
@@ -15,20 +16,6 @@ export const getOrderById = (orderId: string): Types.Order | undefined => {
   return InMemoryOrders.find((o) => o.id === orderId);
 };
 
-export const sendStatus = (orderId: string, status: string, extra: Record<string, any> = {}) => {
-  const socket = orderMap.get(orderId);
-  if (!socket) return; 
-  const payload = JSON.stringify({
-    orderId,
-    status,
-    ...extra,
-  });
-  try {
-    socket.send(payload);
-  } catch (err) {
-    // fastify.log.error({ err }, 'failed to send WS status');
-  }
-};
 export const pickBestQuote = (order: Types.Order, raydium: Types.Quote, meteora: Types.Quote) => {
   const outRaydium = order.amountIn * raydium.quoteVal * (1 - raydium.fee);
   const outMeteora = order.amountIn * meteora.quoteVal * (1 - meteora.fee);

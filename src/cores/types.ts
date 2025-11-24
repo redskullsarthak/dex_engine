@@ -23,13 +23,10 @@ export const OrderSchema = z.object({
   tokenOut: z.string(),
   amountIn: z.number(),
   slippageBps: z.number().optional(),
-  status: OrderStatus,
   chosenDex: DexName.optional(),
   executedPrice: z.number().optional(),
   txHash: z.string().optional(),
   failureReason: z.string().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
 })
 
 export type Order = z.infer<typeof OrderSchema>
