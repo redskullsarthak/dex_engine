@@ -14,6 +14,8 @@ export const OrderType = z.enum(['market'] as const)
 
 export const DexName = z.enum(['raydium', 'meteora'] as const)
 
+export const Quote = z.object({ dex: DexName, quoteVal: z.number(), fee: z.number() })
+
 export const OrderSchema = z.object({
   id: z.string(),
   type: OrderType,
@@ -34,4 +36,4 @@ export type Order = z.infer<typeof OrderSchema>
 export type OrderStatus = z.infer<typeof OrderStatus>
 export type OrderType = z.infer<typeof OrderType>
 export type DexName = z.infer<typeof DexName>
-
+export type Quote=z.infer<typeof Quote>
