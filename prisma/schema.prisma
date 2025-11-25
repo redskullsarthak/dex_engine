@@ -1,0 +1,27 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id             String   @id @default(uuid())
+  type           String   @default("market")
+  tokenIn        String
+  tokenOut       String
+  amountIn       Float
+  slippageBps    Int?
+  status         String   @default("pending")
+  chosenDex      String?
+  executedPrice  Float?
+  txHash         String?
+  failureReason  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

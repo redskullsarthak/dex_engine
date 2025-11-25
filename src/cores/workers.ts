@@ -2,7 +2,7 @@
 import Fastify from "fastify";
 import * as Types from '../cores/types';
 import { DexEngine} from "../cores/mockDexEngine";
-import { InMemoryOrders } from "../routes/orders";
+import { prisma } from "../db";
 import { sendStatus } from "./statusPublisher";
 export const fastify = Fastify({
   logger: true
@@ -12,8 +12,8 @@ export const fastify = Fastify({
 export const makeId = () =>
   Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
 
-export const getOrderById = (orderId: string): Types.Order | undefined => {
-  return InMemoryOrders.find((o) => o.id === orderId);
+export const getOrderById = async (orderId: string): Promise<any | null> => {
+  return await prisma.order.findUnique({ where: { id: orderId } });
 };
 
 export const pickBestQuote = (order: Types.Order, raydium: Types.Quote, meteora: Types.Quote) => {
@@ -37,17 +37,17 @@ export const pickBestQuote = (order: Types.Order, raydium: Types.Quote, meteora:
   }
 };
 export const worker = async (orderId: string) => {
-  const order = getOrderById(orderId);
+  const order = await getOrderById(orderId);
   if (!order) {
-    fastify.log.error({ orderId }, 'order not found in memory');
+    fastify.log.error({ orderId }, 'order not found in database');
     return;
   }
 
   const dex = new DexEngine();
 
   try {
-    sendStatus(orderId, "pending");
-    sendStatus(orderId, "routing");
+    await sendStatus(orderId, "pending");
+    await sendStatus(orderId, "routing");
     const [raydium, meteora] = await Promise.all([
       dex.RaydiumMock(order),
       dex.MeteoraMock(order),
@@ -55,16 +55,16 @@ export const worker = async (orderId: string) => {
 
     const { best, chosenDex, outRaydium, outMeteora } = pickBestQuote(order, raydium, meteora);
 
-    sendStatus(orderId, "building", {
+    await sendStatus(orderId, "building", {
       chosenDex,
       raydiumQuote: raydium,
       meteoraQuote: meteora,
       outRaydium,
       outMeteora,
     });
-    sendStatus(orderId, "submitted", { chosenDex });
+    await sendStatus(orderId, "submitted", { chosenDex });
     const execResult = await dex.Execute(order, best);
-    sendStatus(orderId, "confirmed", {
+    await sendStatus(orderId, "confirmed", {
       dex: execResult.dex,
       txHash: execResult.txHash,
       executedPrice: execResult.executedPrice,
@@ -73,7 +73,7 @@ export const worker = async (orderId: string) => {
     });
 
   } catch (err: any) {
-    sendStatus(orderId, "failed", {
+    await sendStatus(orderId, "failed", {
       error: err?.message ?? 'Unknown error',
     });
   }

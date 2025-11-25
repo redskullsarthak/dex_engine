@@ -1,0 +1,172 @@
+{
+  "info": {
+    "name": "DEX Engine API",
+    "description": "API collection for DEX order execution with WebSocket support",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "wsUrl",
+      "value": "ws://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Execute Order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const response = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response contains orderId\", function () {",
+              "    pm.expect(response).to.have.property('orderId');",
+              "    pm.expect(response.orderId).to.be.a('string');",
+              "});",
+              "",
+              "// Save orderId to collection variable for WebSocket connection",
+              "if (response.orderId) {",
+              "    pm.collectionVariables.set('orderId', response.orderId);",
+              "    console.log('OrderId saved:', response.orderId);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tokenIn\": \"USDC\",\n  \"tokenOut\": \"SOL\",\n  \"amountIn\": 100,\n  \"slippageBps\": 50\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/orders/execute",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders", "execute"]
+        },
+        "description": "Create and execute a new DEX order. Returns an orderId that can be used to track order status via WebSocket."
+      },
+      "response": []
+    },
+    {
+      "name": "Execute Order - High Amount",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const response = pm.response.json();",
+              "pm.collectionVariables.set('orderId', response.orderId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tokenIn\": \"USDC\",\n  \"tokenOut\": \"SOL\",\n  \"amountIn\": 10000,\n  \"slippageBps\": 100\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/orders/execute",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders", "execute"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Execute Order - Minimal Slippage",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const response = pm.response.json();",
+              "pm.collectionVariables.set('orderId', response.orderId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tokenIn\": \"SOL\",\n  \"tokenOut\": \"USDC\",\n  \"amountIn\": 10,\n  \"slippageBps\": 10\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/orders/execute",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders", "execute"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "WebSocket - Order Status Stream",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{wsUrl}}/ws/orders?orderId={{orderId}}",
+          "host": ["{{wsUrl}}"],
+          "path": ["ws", "orders"],
+          "query": [
+            {
+              "key": "orderId",
+              "value": "{{orderId}}",
+              "description": "Order ID to track (set by POST request)"
+            }
+          ]
+        },
+        "description": "WebSocket connection to receive real-time order status updates. Connect after creating an order via POST.\n\nExpected message sequence:\n1. pending\n2. routing (fetching quotes)\n3. building (DEX selected)\n4. submitted (transaction sent)\n5. confirmed (success) OR failed (error)\n\nMessages include: orderId, status, and additional metadata (chosenDex, txHash, executedPrice, etc.)"
+      },
+      "response": []
+    }
+  ]
+}
